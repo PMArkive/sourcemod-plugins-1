@@ -15,7 +15,7 @@
 #define PLUGIN_NAME "TF2 Weapon Reverts"
 #define PLUGIN_DESC "Reverts nerfed weapons back to their glory days"
 #define PLUGIN_AUTHOR "Bakugo"
-#define PLUGIN_VERSION "1.1.3"
+#define PLUGIN_VERSION "1.2.0"
 #define PLUGIN_URL "https://steamcommunity.com/profiles/76561198020610103"
 #define PLUGIN_UPDATER_URL "https://raw.githubusercontent.com/bakugo/sourcemod-plugins/master/plugins/tf2-reverts/updater.txt"
 

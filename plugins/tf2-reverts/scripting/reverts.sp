@@ -6,16 +6,18 @@
 #include <tf2_stocks>
 #include <tf2items>
 #include <dhooks>
+#undef REQUIRE_PLUGIN
+#include <updater>
 
 #pragma semicolon 1
 #pragma newdecls required
 
-#define PLUGIN_FILE "reverts"
 #define PLUGIN_NAME "TF2 Weapon Reverts"
 #define PLUGIN_DESC "Reverts nerfed weapons back to their glory days"
 #define PLUGIN_AUTHOR "Bakugo"
 #define PLUGIN_VERSION "1.1.3"
 #define PLUGIN_URL "https://steamcommunity.com/profiles/76561198020610103"
+#define PLUGIN_UPDATER_URL "https://raw.githubusercontent.com/bakugo/sourcemod-plugins/master/plugins/tf2-reverts/updater.txt"
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
@@ -129,10 +131,10 @@ public void OnPluginStart() {
 	Handle conf;
 	char tmp[64];
 	
-	CreateConVar(("sm_" ... PLUGIN_FILE ... "__version"), PLUGIN_VERSION, (PLUGIN_NAME ... " - Version"), (FCVAR_NOTIFY|FCVAR_DONTRECORD));
+	CreateConVar("sm_reverts__version", PLUGIN_VERSION, (PLUGIN_NAME ... " - Version"), (FCVAR_NOTIFY|FCVAR_DONTRECORD));
 	
-	cvar_enable = CreateConVar(("sm_" ... PLUGIN_FILE ... "__enable"), "1", (PLUGIN_NAME ... " - Enable plugin"), _, true, 0.0, true, 1.0);
-	cvar_extras = CreateConVar(("sm_" ... PLUGIN_FILE ... "__extras"), "0", (PLUGIN_NAME ... " - Enable some fun extra features"), _, true, 0.0, true, 1.0);
+	cvar_enable = CreateConVar("sm_reverts__enable", "1", (PLUGIN_NAME ... " - Enable plugin"), _, true, 0.0, true, 1.0);
+	cvar_extras = CreateConVar("sm_reverts__extras", "0", (PLUGIN_NAME ... " - Enable some fun extra features"), _, true, 0.0, true, 1.0);
 	
 	ItemDefine("Airblast", "airblast", "All flamethrowers' airblast mechanics are reverted to pre-inferno", ITEM_FL_PICKABLE);
 	ItemDefine("Air Strike", "airstrike", "Reverted to pre-toughbreak, no extra blast radius penalty when blast jumping");
@@ -193,7 +195,7 @@ public void OnPluginStart() {
 	
 	ItemFinalize();
 	
-	AutoExecConfig(false, PLUGIN_FILE, "sourcemod");
+	AutoExecConfig(false, "reverts", "sourcemod");
 	
 	hudsync = CreateHudSynchronizer();
 	
@@ -229,7 +231,7 @@ public void OnPluginStart() {
 	AddNormalSoundHook(OnSoundNormal);
 	
 	
-	conf = LoadGameConfigFile(PLUGIN_FILE);
+	conf = LoadGameConfigFile("reverts");
 	
 	if (conf == null) SetFailState("Failed to load conf");
 	
@@ -275,6 +277,17 @@ public void OnPluginStart() {
 		if (IsClientInGame(idx)) OnClientPutInServer(idx);
 		if (AreClientCookiesCached(idx)) OnClientCookiesCached(idx);
 	}
+	
+	
+	if (LibraryExists("updater")) {
+		Updater_AddPlugin(PLUGIN_UPDATER_URL);
+	}
+}
+
+public OnLibraryAdded(const char[] name) {
+	if (StrEqual(class, "updater")) {
+		Updater_AddPlugin(PLUGIN_UPDATER_URL);
+	}
 }
 
 public void OnMapStart() {
@@ -309,7 +322,7 @@ public void OnGameFrame() {
 				IsPlayerAlive(idx)
 			) {
 				{
-					// respawn to apply attibs
+					// respawn to apply attribs
 					
 					if (players[idx].respawn > 0) {
 						if ((players[idx].respawn + 2) == GetGameTickCount()) {
@@ -2418,7 +2431,7 @@ void ItemFinalize() {
 			
 			AddMenuItem(menu_pick, items[idx].key, "ERROR", _);
 			
-			Format(cvar_name, sizeof(cvar_name), ("sm_" ... PLUGIN_FILE ... "__item_%s"), items[idx].key);
+			Format(cvar_name, sizeof(cvar_name), "sm_reverts__item_%s", items[idx].key);
 			Format(cvar_desc, sizeof(cvar_desc), (PLUGIN_NAME ... " - Revert nerfs to %s"), items[idx].name);
 			
 			items[idx].cvar = CreateConVar(cvar_name, "1", cvar_desc, _, true, 0.0, true, 1.0);

@@ -1,0 +1,63 @@
+"Games"
+{
+	"tf"
+	{
+		"Signatures"
+		{
+			"JarExplode"
+			{
+				"library" "server"
+				"linux" "@_Z10JarExplodeiP9CTFPlayerP11CBaseEntityS2_RK6Vectorif7ETFCondfPKcS8_"
+				"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xD8\x01\x00\x00\x56\x57\x8D\x8D\x64\xFF\xFF\xFF"
+			}
+		}
+		
+		"Offsets"
+		{
+			"CTFWeaponBase::PrimaryAttack"
+			{
+				"linux" "286"
+				"windows" "280"
+			}
+			
+			"CTFWeaponBase::SecondaryAttack"
+			{
+				"linux" "287"
+				"windows" "281"
+			}
+			
+			"CTFBaseRocket::GetRadius"
+			{
+				"linux" "238"
+				"windows" "237"
+			}
+		}
+		
+		"Functions"
+		{
+			"CTFWeaponBase::PrimaryAttack"
+			{
+				"offset" "CTFWeaponBase::PrimaryAttack"
+				"hooktype" "entity"
+				"this" "entity"
+				"return" "void"
+			}
+			
+			"CTFWeaponBase::SecondaryAttack"
+			{
+				"offset" "CTFWeaponBase::SecondaryAttack"
+				"hooktype" "entity"
+				"this" "entity"
+				"return" "void"
+			}
+			
+			"CTFBaseRocket::GetRadius"
+			{
+				"offset" "CTFBaseRocket::GetRadius"
+				"hooktype" "entity"
+				"this" "entity"
+				"return" "float"
+			}
+		}
+	}
+}

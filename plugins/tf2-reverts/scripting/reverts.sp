@@ -284,8 +284,8 @@ public void OnPluginStart() {
 	}
 }
 
-public OnLibraryAdded(const char[] name) {
-	if (StrEqual(class, "updater")) {
+public void OnLibraryAdded(const char[] name) {
+	if (StrEqual(name, "updater")) {
 		Updater_AddPlugin(PLUGIN_UPDATER_URL);
 	}
 }

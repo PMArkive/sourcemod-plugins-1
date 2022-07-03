@@ -238,15 +238,16 @@ public void OnPluginStart() {
 	StartPrepSDKCall(SDKCall_Static);
 	PrepSDKCall_SetFromConf(conf, SDKConf_Signature, "JarExplode");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain); // int iEntIndex
-	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer); // CTFPlayer *pAttacker
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // CBaseEntity *pOriginalWeapon
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // CBaseEntity *pWeapon
-	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef); // const Vector& vContactPoint
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer); // CTFPlayer* pAttacker
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // CBaseEntity* pOriginalWeapon
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // CBaseEntity* pWeapon
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef); // Vector& vContactPoint
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain); // int iTeam
 	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain); // float flRadius
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain); // ETFCond cond
 	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain); // float flDuration
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer); // const char* pszImpactEffect
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer); // char* pszImpactEffect
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer); // char* pszSound
 	sdkcall_JarExplode = EndPrepSDKCall();
 	
 	dhook_CTFWeaponBase_PrimaryAttack = DHookCreateFromConf(conf, "CTFWeaponBase::PrimaryAttack");
@@ -292,6 +293,7 @@ public void OnLibraryAdded(const char[] name) {
 
 public void OnMapStart() {
 	PrecacheSound("misc/banana_slip.wav");
+	PrecacheScriptSound("Jar.Explode");
 }
 
 public void OnGameFrame() {
@@ -2220,7 +2222,10 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 	return Plugin_Continue;
 }
 
-Action SDKHookCB_OnTakeDamageAlive(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& weapon, float damageforce[3], float damageposition[3], int damagecustom) {
+Action SDKHookCB_OnTakeDamageAlive(
+	int victim, int& attacker, int& inflictor, float& damage, int& damage_type,
+	int& weapon, float damage_force[3], float damage_position[3], int damage_custom
+) {
 	if (
 		victim >= 1 && victim <= MaxClients &&
 		attacker >= 1 && attacker <= MaxClients
@@ -2235,11 +2240,14 @@ Action SDKHookCB_OnTakeDamageAlive(int victim, int& attacker, int& inflictor, fl
 				// condition must be added in OnTakeDamageAlive, otherwise initial shot will crit
 				TF2_AddCondition(victim, TFCond_Jarated, players[attacker].sleeper_piss_duration, 0);
 				
-				ParticleShowSimple("peejar_impact_small", damageposition);
-				
 				if (players[attacker].sleeper_piss_explode) {
 					// call into game code to cause a jarate explosion on the target
-					SDKCall(sdkcall_JarExplode, victim, attacker, inflictor, inflictor, damageposition, GetClientTeam(attacker), 100.0, TFCond_Jarated, players[attacker].sleeper_piss_duration, "peejar_impact");
+					SDKCall(
+						sdkcall_JarExplode, victim, attacker, inflictor, inflictor, damage_position, GetClientTeam(attacker),
+						100.0, TFCond_Jarated, players[attacker].sleeper_piss_duration, "peejar_impact", "Jar.Explode"
+					);
+				} else {
+					ParticleShowSimple("peejar_impact_small", damage_position);
 				}
 			}
 		}

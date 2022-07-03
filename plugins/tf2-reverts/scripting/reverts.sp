@@ -1572,14 +1572,11 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 	) {
 		item1 = TF2Items_CreateItem(0);
 		TF2Items_SetFlags(item1, (OVERRIDE_ATTRIBUTES|PRESERVE_ATTRIBUTES));
-		TF2Items_SetNumAttributes(item1, 5);
+		TF2Items_SetNumAttributes(item1, 4);
 		TF2Items_SetAttribute(item1, 0, 15, 1.0); // crit mod disabled
-		TF2Items_SetAttribute(item1, 1, 199, 0.58); // switch from wep deploy time decreased
-		TF2Items_SetAttribute(item1, 2, 220, 0.0); // restore health on kill
-		TF2Items_SetAttribute(item1, 3, 226, 0.0); // honorbound
-		TF2Items_SetAttribute(item1, 4, 547, 0.58); // single wep deploy time decreased
-		
-		// TF2Items_SetAttribute(item1, 0, 781, 0.0); // is a sword
+		TF2Items_SetAttribute(item1, 1, 220, 0.0); // restore health on kill
+		TF2Items_SetAttribute(item1, 2, 226, 0.0); // honorbound
+		TF2Items_SetAttribute(item1, 3, 781, 0.0); // is a sword
 	}
 	
 	if (item1 != null) {

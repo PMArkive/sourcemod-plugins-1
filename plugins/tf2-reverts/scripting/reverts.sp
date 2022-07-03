@@ -1001,7 +1001,10 @@ public void OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 	}
 }
 
-public Action OnSoundNormal(int clients[MAXPLAYERS], int &clients_num, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundentry[PLATFORM_MAX_PATH], int &seed) {
+public Action OnSoundNormal(
+	int clients[MAXPLAYERS], int &clients_num, char sample[PLATFORM_MAX_PATH], int &entity, int &channel,
+	float &volume, int &level, int &pitch, int &flags, char soundentry[PLATFORM_MAX_PATH], int &seed
+) {
 	int idx;
 	
 	if (StrContains(sample, "player/pl_impact_stun") == 0) {
@@ -1595,6 +1598,8 @@ Action SDKHookCB_Spawn(int entity) {
 	if (StrContains(class, "tf_projectile_") == 0) {
 		entities[entity].spawn_time = GetGameTime();
 	}
+	
+	return Plugin_Continue;
 }
 
 void SDKHookCB_SpawnPost(int entity) {
@@ -1699,7 +1704,10 @@ Action SDKHookCB_Touch(int entity, int other) {
 	return Plugin_Continue;
 }
 
-Action SDKHookCB_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup) {
+Action SDKHookCB_TraceAttack(
+	int victim, int& attacker, int& inflictor, float& damage,
+	int& damage_type, int& ammo_type, int hitbox, int hitgroup
+) {
 	if (
 		victim >= 1 && victim <= MaxClients &&
 		attacker >= 1 && attacker <= MaxClients
@@ -1707,7 +1715,7 @@ Action SDKHookCB_TraceAttack(int victim, int& attacker, int& inflictor, float& d
 		if (
 			hitgroup == 1 &&
 			(
-				(damagetype & DMG_USE_HITLOCATIONS) != 0 || // for ambassador
+				(damage_type & DMG_USE_HITLOCATIONS) != 0 || // for ambassador
 				TF2_GetPlayerClass(attacker) == TFClass_Sniper // for sydney sleeper
 			)
 		) {
@@ -1718,7 +1726,10 @@ Action SDKHookCB_TraceAttack(int victim, int& attacker, int& inflictor, float& d
 	return Plugin_Continue;
 }
 
-Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& weapon, float damageforce[3], float damageposition[3], int damagecustom) {
+Action SDKHookCB_OnTakeDamage(
+	int victim, int& attacker, int& inflictor, float& damage, int& damage_type,
+	int& weapon, float damage_force[3], float damage_position[3], int damage_custom
+) {
 	int idx;
 	char class[64];
 	float pos1[3];
@@ -1773,7 +1784,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 			if (
 				ItemIsEnabled("turner", victim) &&
 				victim != attacker &&
-				(damagetype & DMG_FALL) == 0 &&
+				(damage_type & DMG_FALL) == 0 &&
 				TF2_GetPlayerClass(victim) == TFClass_DemoMan &&
 				TF2_IsPlayerInCondition(victim, TFCond_Charging)
 			) {
@@ -1822,7 +1833,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 					StrEqual(class, "tf_weapon_stickbomb")
 				) {
 					if (
-						damagecustom == TF_DMG_CUSTOM_NONE &&
+						damage_custom == TF_DMG_CUSTOM_NONE &&
 						damage == 55.0
 					) {
 						// melee damage is always 35
@@ -1830,13 +1841,13 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 						return Plugin_Changed;
 					}
 					
-					if (damagecustom == TF_DMG_CUSTOM_STICKBOMB_EXPLOSION) {
+					if (damage_custom == TF_DMG_CUSTOM_STICKBOMB_EXPLOSION) {
 						// base explosion is 100 damage
 						damage = 100.0;
 						
 						if (
 							victim != attacker &&
-							(damagetype & DMG_CRIT) == 0
+							(damage_type & DMG_CRIT) == 0
 						) {
 							GetClientEyePosition(attacker, pos1);
 							
@@ -1862,7 +1873,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 					StrEqual(class, "tf_weapon_cannon")
 				) {
 					if (
-						damagecustom == TF_DMG_CUSTOM_CANNONBALL_PUSH &&
+						damage_custom == TF_DMG_CUSTOM_CANNONBALL_PUSH &&
 						damage > 20.0 &&
 						damage < 51.0
 					) {
@@ -1884,7 +1895,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 						GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 1006
 					)
 				) {
-					damagetype = (damagetype | DMG_CRIT);
+					damage_type = (damage_type | DMG_CRIT);
 					return Plugin_Changed;
 				}
 			}
@@ -1911,7 +1922,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 				if (
 					ItemIsEnabled("equalizer", attacker) &&
 					StrEqual(class, "tf_weapon_shovel") &&
-					damagecustom == TF_DMG_CUSTOM_PICKAXE &&
+					damage_custom == TF_DMG_CUSTOM_PICKAXE &&
 					(
 						GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 128 ||
 						GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 775
@@ -1964,7 +1975,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 				if (
 					ItemIsEnabled("sandman", attacker) &&
 					StrEqual(class, "tf_weapon_bat_wood") &&
-					damagecustom == TF_DMG_CUSTOM_BASEBALL
+					damage_custom == TF_DMG_CUSTOM_BASEBALL
 				) {
 					if (players[victim].projectile_touch_frame == GetGameTickCount()) {
 						players[victim].projectile_touch_frame = 0;
@@ -1982,7 +1993,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 								stun_dur = stun_amt;
 								stun_dur = (stun_dur * 6.0);
 								
-								if ((damagetype & DMG_CRIT) != 0) {
+								if ((damage_type & DMG_CRIT) != 0) {
 									stun_dur = (stun_dur + 2.0);
 								}
 								
@@ -2052,8 +2063,8 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 					
 					// disable headshot crits
 					// ...is this even needed?
-					if (damagetype & DMG_CRIT != 0) {
-						damagetype = (damagetype & ~DMG_CRIT);
+					if (damage_type & DMG_CRIT != 0) {
+						damage_type = (damage_type & ~DMG_CRIT);
 						return Plugin_Changed;
 					}
 				}
@@ -2079,7 +2090,7 @@ Action SDKHookCB_OnTakeDamage(int victim, int& attacker, int& inflictor, float& 
 									damage = damage1;
 								}
 								
-								damagetype = (damagetype | DMG_DONT_COUNT_DAMAGE_TOWARDS_CRIT_RATE);
+								damage_type = (damage_type | DMG_DONT_COUNT_DAMAGE_TOWARDS_CRIT_RATE);
 								
 								return Plugin_Changed;
 							}
@@ -2307,16 +2318,19 @@ bool TraceFilter_ExcludePlayers(int entity, int contentsmask, any data) {
 bool TraceFilter_CustomShortCircuit(int entity, int contentsmask, any data) {
 	char class[64];
 	
+	// ignore the target projectile
 	if (entity == data) {
 		return false;
 	}
 	
+	// ignore players
 	if (entity <= MaxClients) {
 		return false;
 	}
 	
 	GetEntityClassname(entity, class, sizeof(class));
 	
+	// ignore buildings and other projectiles
 	if (
 		StrContains(class, "obj_") == 0 ||
 		StrContains(class, "tf_projectile_") == 0
@@ -2462,6 +2476,7 @@ int ItemKeyToNum(char[] key) {
 
 bool ItemIsEnabled(char[] key, int client = 0) {
 	int item;
+	char class[32];
 	
 	if (client <= MaxClients) {
 		item = ItemKeyToNum(key);
@@ -2479,7 +2494,13 @@ bool ItemIsEnabled(char[] key, int client = 0) {
 			LogError("ItemIsEnabled called for undefined item (%s)", key);
 		}
 	} else {
-		LogError("ItemIsEnabled called for invalid client (%d)", client);
+		if (IsValidEntity(client)) {
+			GetEntityClassname(client, class, sizeof(class));
+		} else {
+			strcopy(class, sizeof(class), "NULL");
+		}
+		
+		LogError("ItemIsEnabled called for invalid client (item %s, index %d, class %s)", key, client, class);
 	}
 	
 	return false;
@@ -2801,10 +2822,12 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 				GetClientEyePosition(owner, player_pos);
 				GetClientEyeAngles(owner, angles1);
 				
+				// scan for entities to hit
 				for (idx = 1; idx < 2048; idx++) {
 					if (IsValidEntity(idx)) {
 						GetEntityClassname(idx, class, sizeof(class));
 						
+						// only hit players and some projectiles
 						if (
 							(idx <= MaxClients) ||
 							StrEqual(class, "tf_projectile_rocket") ||
@@ -2817,15 +2840,18 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 							StrEqual(class, "tf_projectile_ball_ornament") ||
 							StrEqual(class, "tf_projectile_cleaver")
 						) {
+							// don't hit stuff on the same team
 							if (GetEntProp(idx, Prop_Send, "m_iTeamNum") != GetClientTeam(owner)) {
 								GetEntPropVector(idx, Prop_Send, "m_vecOrigin", target_pos);
 								
+								// if hitting a player, compare to center
 								if (idx <= MaxClients) {
 									target_pos[2] += PLAYER_CENTER_HEIGHT;
 								}
 								
 								distance = GetVectorDistance(player_pos, target_pos);
 								
+								// absolute max distance
 								if (distance < 300.0) {
 									MakeVectorFromPoints(player_pos, target_pos, vector);
 									
@@ -2836,19 +2862,25 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 									angles1[0] = 0.0;
 									angles2[0] = 0.0;
 									
+									// more strict angles vs players than projectiles
 									if (idx <= MaxClients) {
 										limit = ValveRemapVal(distance, 0.0, 150.0, 70.0, 25.0);
 									} else {
 										limit = ValveRemapVal(distance, 0.0, 200.0, 80.0, 40.0);
 									}
 									
+									// check if view angle relative to target is in range
 									if (CalcViewsOffset(angles1, angles2) < limit) {
+										// trace from player camera pos to target
 										TR_TraceRayFilter(player_pos, target_pos, MASK_SOLID, RayType_EndPoint, TraceFilter_CustomShortCircuit, idx);
 										
+										// didn't hit anything on the way to the target, so proceed
 										if (TR_DidHit() == false) {
 											if (idx <= MaxClients) {
+												// damage players
 												SDKHooks_TakeDamage(idx, entity, owner, BALANCE_CIRCUIT_DAMAGE, DMG_SHOCK, entity, NULL_VECTOR, target_pos);
 											} else {
+												// delete projectiles
 												RemoveEntity(idx);
 											}
 										}

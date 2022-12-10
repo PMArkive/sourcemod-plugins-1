@@ -16,20 +16,20 @@
 		{
 			"CTFWeaponBase::PrimaryAttack"
 			{
-				"linux" "289"
-				"windows" "283"
+				"linux" "292"
+				"windows" "286"
 			}
 			
 			"CTFWeaponBase::SecondaryAttack"
 			{
-				"linux" "290"
-				"windows" "284"
+				"linux" "293"
+				"windows" "287"
 			}
 			
 			"CTFBaseRocket::GetRadius"
 			{
-				"linux" "241"
-				"windows" "240"
+				"linux" "244"
+				"windows" "243"
 			}
 		}
 		

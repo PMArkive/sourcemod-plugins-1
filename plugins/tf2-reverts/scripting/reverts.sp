@@ -88,7 +88,6 @@ enum struct Player {
 	float icicle_regen_time;
 	int scout_airdash_value;
 	int scout_airdash_count;
-	int player_damage_frame;
 }
 
 enum struct Entity {
@@ -777,7 +776,9 @@ public void OnGameFrame() {
 								
 								if (pos1[2] < GetConVarFloat(cvar_ref_tf_parachute_maxspeed_onfire_z)) {
 									pos1[2] = GetConVarFloat(cvar_ref_tf_parachute_maxspeed_onfire_z);
-									TeleportEntity(idx, NULL_VECTOR, NULL_VECTOR, pos1);
+									
+									// don't use TeleportEntity to avoid the trigger re-entry bug
+									SetEntPropVector(idx, Prop_Data, "m_vecAbsVelocity", pos1);
 								}
 							}
 						} else {
@@ -941,9 +942,9 @@ public void OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			
 			if (
 				client > 0 &&
-				client < MaxClients &&
+				client <= MaxClients &&
 				attacker > 0 &&
-				attacker < MaxClients &&
+				attacker <= MaxClients &&
 				IsClientInGame(client) &&
 				IsClientInGame(attacker) &&
 				client != attacker &&
@@ -1002,13 +1003,13 @@ public void OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 }
 
 public Action OnSoundNormal(
-	int clients[MAXPLAYERS], int &clients_num, char sample[PLATFORM_MAX_PATH], int &entity, int &channel,
-	float &volume, int &level, int &pitch, int &flags, char soundentry[PLATFORM_MAX_PATH], int &seed
+	int clients[MAXPLAYERS], int& clients_num, char sample[PLATFORM_MAX_PATH], int& entity, int& channel,
+	float& volume, int& level, int& pitch, int& flags, char soundentry[PLATFORM_MAX_PATH], int& seed
 ) {
 	int idx;
 	
 	if (StrContains(sample, "player/pl_impact_stun") == 0) {
-		for (idx = 1; idx < MaxClients; idx++) {
+		for (idx = 1; idx <= MaxClients; idx++) {
 			if (
 				ItemIsEnabled("sandman", idx) &&
 				players[idx].projectile_touch_frame == GetGameTickCount()
@@ -1102,9 +1103,7 @@ public void OnEntityCreated(int entity, const char[] class) {
 		DHookEntity(dhook_CTFWeaponBase_SecondaryAttack, false, entity, _, DHookCallback_CTFWeaponBase_SecondaryAttack);
 	}
 	
-	if (
-		StrEqual(class, "tf_weapon_mechanical_arm")
-	) {
+	if (StrEqual(class, "tf_weapon_mechanical_arm")) {
 		DHookEntity(dhook_CTFWeaponBase_PrimaryAttack, false, entity, _, DHookCallback_CTFWeaponBase_PrimaryAttack);
 		DHookEntity(dhook_CTFWeaponBase_SecondaryAttack, false, entity, _, DHookCallback_CTFWeaponBase_SecondaryAttack);
 	}
@@ -2008,7 +2007,7 @@ Action SDKHookCB_OnTakeDamage(
 									if (GetConVarBool(cvar_extras)) {
 										SetHudTextParams(-1.0, 0.09, 4.0, 255, 255, 255, 255, 2, 0.5, 0.01, 1.0);
 										
-										for (idx = 1; idx < MaxClients; idx++) {
+										for (idx = 1; idx <= MaxClients; idx++) {
 											if (IsClientInGame(idx)) {
 												ShowSyncHudText(idx, hudsync, "%N just landed a MOONSHOT on %N !", attacker, victim);
 											}
@@ -2805,7 +2804,7 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 			metal = GetEntProp(owner, Prop_Data, "m_iAmmo", 4, 3);
 			
 			if (metal >= BALANCE_CIRCUIT_METAL) {
-				for (idx = 1; idx < MaxClients; idx++) {
+				for (idx = 1; idx <= MaxClients; idx++) {
 					if (
 						IsClientInGame(idx) &&
 						(
@@ -2912,6 +2911,7 @@ MRESReturn DHookCallback_CTFBaseRocket_GetRadius(int entity, Handle return_) {
 	
 	if (
 		owner > 0 &&
+		owner <= MaxClients && // rockets can be fired by non-player entities
 		weapon > 0
 	) {
 		if (StrEqual(class, "tf_projectile_rocket")) {

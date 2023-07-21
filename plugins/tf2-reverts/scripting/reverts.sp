@@ -222,10 +222,10 @@ public void OnPluginStart() {
 		cookie_reverts[idx] = RegClientCookie(tmp, PLUGIN_NAME, CookieAccess_Protected);
 	}
 	
-	HookEvent("player_spawn", OnGameEvent);
-	HookEvent("player_death", OnGameEvent);
-	HookEvent("post_inventory_application", OnGameEvent);
-	HookEvent("item_pickup", OnGameEvent);
+	HookEvent("player_spawn", OnGameEvent, EventHookMode_Post);
+	HookEvent("player_death", OnGameEvent, EventHookMode_Pre);
+	HookEvent("post_inventory_application", OnGameEvent, EventHookMode_Post);
+	HookEvent("item_pickup", OnGameEvent, EventHookMode_Post);
 	
 	AddNormalSoundHook(OnSoundNormal);
 	
@@ -861,177 +861,6 @@ public void OnGameFrame() {
 	}
 }
 
-public void OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
-	int client;
-	int attacker;
-	int weapon;
-	int health_cur;
-	int health_max;
-	char class[64];
-	float charge;
-	Event event1;
-	
-	if (StrEqual(name, "player_spawn")) {
-		client = GetClientOfUserId(GetEventInt(event, "userid"));
-		
-		{
-			// apply attrib changes
-			
-			if (IsPlayerAlive(client)) {
-				ItemPlayerApply(client);
-				
-				if (players[client].change) {
-					// tf2 only respawns a player's weapon/wearable entities when those entities are different from
-					// the ones that should be equipped, aka when the player changes class or equips a different weapon.
-					// we manually force it to happen by removing the entities and respawning the player a few ticks later.
-					
-					PlayerRemoveEquipment(client);
-					
-					players[client].respawn = GetGameTickCount();
-					players[client].change = false;
-				}
-			}
-		}
-		
-		{
-			// vitasaw charge apply
-			
-			if (
-				ItemIsEnabled("vitasaw", client) &&
-				IsPlayerAlive(client) &&
-				TF2_GetPlayerClass(client) == TFClass_Medic &&
-				GameRules_GetRoundState() == RoundState_RoundRunning
-			) {
-				weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
-				
-				if (weapon > 0) {
-					GetEntityClassname(weapon, class, sizeof(class));
-					
-					if (
-						StrEqual(class, "tf_weapon_bonesaw") &&
-						GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 173
-					) {
-						weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
-						
-						if (weapon > 0) {
-							GetEntityClassname(weapon, class, sizeof(class));
-							
-							if (
-								StrEqual(class, "tf_weapon_medigun") &&
-								GetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel") < 0.01 &&
-								GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == players[client].medic_medigun_defidx
-							) {
-								charge = players[client].medic_medigun_charge;
-								charge = (charge > 0.20 ? 0.20 : charge);
-								
-								SetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel", charge);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	if (StrEqual(name, "player_death")) {
-		client = GetClientOfUserId(GetEventInt(event, "userid"));
-		attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-		
-		{
-			// zatoichi heal on kill
-			
-			if (
-				client > 0 &&
-				client <= MaxClients &&
-				attacker > 0 &&
-				attacker <= MaxClients &&
-				IsClientInGame(client) &&
-				IsClientInGame(attacker) &&
-				client != attacker &&
-				(GetEventInt(event, "death_flags") & TF_DEATH_FEIGN_DEATH) == 0 &&
-				GetEventInt(event, "inflictor_entindex") == attacker && // make sure it wasn't a "finished off" kill
-				IsPlayerAlive(attacker)
-			) {
-				weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
-				
-				if (weapon > 0) {
-					GetEntityClassname(weapon, class, sizeof(class));
-					
-					if (
-						ItemIsEnabled("zatoichi", attacker) &&
-						StrEqual(class, "tf_weapon_katana")
-					) {
-						health_cur = GetClientHealth(attacker);
-						health_max = SDKCall(sdkcall_GetMaxHealth, attacker);
-						
-						if (health_cur < health_max) {
-							SetEntProp(attacker, Prop_Send, "m_iHealth", health_max);
-							
-							event1 = CreateEvent("player_healonhit", true);
-							
-							SetEventInt(event1, "amount", health_max);
-							SetEventInt(event1, "entindex", attacker);
-							SetEventInt(event1, "weapon_def_index", -1);
-							
-							FireEvent(event1);
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	if (StrEqual(name, "post_inventory_application")) {
-		client = GetClientOfUserId(GetEventInt(event, "userid"));
-		
-		// keep track of resupply time
-		players[client].resupply_time = GetGameTime();
-	}
-	
-	if (StrEqual(name, "item_pickup")) {
-		client = GetClientOfUserId(GetEventInt(event, "userid"));
-		
-		GetEventString(event, "item", class, sizeof(class));
-		
-		if (
-			StrContains(class, "ammopack_") == 0 || // normal map pickups
-			StrContains(class, "tf_ammo_") == 0 // ammo dropped on death
-		) {
-			players[client].ammo_grab_frame = GetGameTickCount();
-		}
-	}
-}
-
-public Action OnSoundNormal(
-	int clients[MAXPLAYERS], int& clients_num, char sample[PLATFORM_MAX_PATH], int& entity, int& channel,
-	float& volume, int& level, int& pitch, int& flags, char soundentry[PLATFORM_MAX_PATH], int& seed
-) {
-	int idx;
-	
-	if (StrContains(sample, "player/pl_impact_stun") == 0) {
-		for (idx = 1; idx <= MaxClients; idx++) {
-			if (
-				ItemIsEnabled("sandman", idx) &&
-				players[idx].projectile_touch_frame == GetGameTickCount()
-			) {
-				// cancel duplicate sandman stun sounds
-				// we cancel the default stun and apply our own
-				return Plugin_Stop;
-			}
-			
-			if (
-				ItemIsEnabled("bonk", idx) &&
-				players[idx].bonk_cond_frame == GetGameTickCount()
-			) {
-				// cancel bonk stun sound
-				return Plugin_Stop;
-			}
-		}
-	}
-	
-	return Plugin_Continue;
-}
-
 public void OnClientConnected(int client) {
 	int idx;
 	
@@ -1584,6 +1413,206 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 	if (item1 != null) {
 		item = item1;
 		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
+}
+
+Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
+	int client;
+	int attacker;
+	int weapon;
+	int health_cur;
+	int health_max;
+	char class[64];
+	float charge;
+	Event event1;
+	
+	if (StrEqual(name, "player_spawn")) {
+		client = GetClientOfUserId(GetEventInt(event, "userid"));
+		
+		{
+			// apply attrib changes
+			
+			if (IsPlayerAlive(client)) {
+				ItemPlayerApply(client);
+				
+				if (players[client].change) {
+					// tf2 only respawns a player's weapon/wearable entities when those entities are different from
+					// the ones that should be equipped, aka when the player changes class or equips a different weapon.
+					// we manually force it to happen by removing the entities and respawning the player a few ticks later.
+					
+					PlayerRemoveEquipment(client);
+					
+					players[client].respawn = GetGameTickCount();
+					players[client].change = false;
+				}
+			}
+		}
+		
+		{
+			// vitasaw charge apply
+			
+			if (
+				ItemIsEnabled("vitasaw", client) &&
+				IsPlayerAlive(client) &&
+				TF2_GetPlayerClass(client) == TFClass_Medic &&
+				GameRules_GetRoundState() == RoundState_RoundRunning
+			) {
+				weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
+				
+				if (weapon > 0) {
+					GetEntityClassname(weapon, class, sizeof(class));
+					
+					if (
+						StrEqual(class, "tf_weapon_bonesaw") &&
+						GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 173
+					) {
+						weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
+						
+						if (weapon > 0) {
+							GetEntityClassname(weapon, class, sizeof(class));
+							
+							if (
+								StrEqual(class, "tf_weapon_medigun") &&
+								GetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel") < 0.01 &&
+								GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == players[client].medic_medigun_defidx
+							) {
+								charge = players[client].medic_medigun_charge;
+								charge = (charge > 0.20 ? 0.20 : charge);
+								
+								SetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel", charge);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	if (StrEqual(name, "player_death")) {
+		client = GetClientOfUserId(GetEventInt(event, "userid"));
+		attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+		
+		if (
+			client > 0 &&
+			client <= MaxClients &&
+			attacker > 0 &&
+			attacker <= MaxClients &&
+			IsClientInGame(client) &&
+			IsClientInGame(attacker)
+		) {
+			{
+				// zatoichi heal on kill
+				
+				if (
+					client != attacker &&
+					(GetEventInt(event, "death_flags") & TF_DEATH_FEIGN_DEATH) == 0 &&
+					GetEventInt(event, "inflictor_entindex") == attacker && // make sure it wasn't a "finished off" kill
+					IsPlayerAlive(attacker)
+				) {
+					weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
+					
+					if (weapon > 0) {
+						GetEntityClassname(weapon, class, sizeof(class));
+						
+						if (
+							ItemIsEnabled("zatoichi", attacker) &&
+							StrEqual(class, "tf_weapon_katana")
+						) {
+							health_cur = GetClientHealth(attacker);
+							health_max = SDKCall(sdkcall_GetMaxHealth, attacker);
+							
+							if (health_cur < health_max) {
+								SetEntProp(attacker, Prop_Send, "m_iHealth", health_max);
+								
+								event1 = CreateEvent("player_healonhit", true);
+								
+								SetEventInt(event1, "amount", health_max);
+								SetEventInt(event1, "entindex", attacker);
+								SetEventInt(event1, "weapon_def_index", -1);
+								
+								FireEvent(event1);
+							}
+						}
+					}
+				}
+			}
+			
+			{
+				// ambassador headshot kill icon
+				
+				if (
+					GetEventInt(event, "customkill") != TF_CUSTOM_HEADSHOT &&
+					players[attacker].headshot_frame == GetGameTickCount()
+				) {
+					weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
+					
+					if (weapon > 0) {
+						GetEntityClassname(weapon, class, sizeof(class));
+						
+						if (
+							ItemIsEnabled("ambassador", attacker) &&
+							StrEqual(class, "tf_weapon_revolver")
+						) {
+							SetEventInt(event, "customkill", TF_CUSTOM_HEADSHOT);
+							
+							return Plugin_Changed;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	if (StrEqual(name, "post_inventory_application")) {
+		client = GetClientOfUserId(GetEventInt(event, "userid"));
+		
+		// keep track of resupply time
+		players[client].resupply_time = GetGameTime();
+	}
+	
+	if (StrEqual(name, "item_pickup")) {
+		client = GetClientOfUserId(GetEventInt(event, "userid"));
+		
+		GetEventString(event, "item", class, sizeof(class));
+		
+		if (
+			StrContains(class, "ammopack_") == 0 || // normal map pickups
+			StrContains(class, "tf_ammo_") == 0 // ammo dropped on death
+		) {
+			players[client].ammo_grab_frame = GetGameTickCount();
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+Action OnSoundNormal(
+	int clients[MAXPLAYERS], int& clients_num, char sample[PLATFORM_MAX_PATH], int& entity, int& channel,
+	float& volume, int& level, int& pitch, int& flags, char soundentry[PLATFORM_MAX_PATH], int& seed
+) {
+	int idx;
+	
+	if (StrContains(sample, "player/pl_impact_stun") == 0) {
+		for (idx = 1; idx <= MaxClients; idx++) {
+			if (
+				ItemIsEnabled("sandman", idx) &&
+				players[idx].projectile_touch_frame == GetGameTickCount()
+			) {
+				// cancel duplicate sandman stun sounds
+				// we cancel the default stun and apply our own
+				return Plugin_Stop;
+			}
+			
+			if (
+				ItemIsEnabled("bonk", idx) &&
+				players[idx].bonk_cond_frame == GetGameTickCount()
+			) {
+				// cancel bonk stun sound
+				return Plugin_Stop;
+			}
+		}
 	}
 	
 	return Plugin_Continue;

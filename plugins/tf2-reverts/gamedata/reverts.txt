@@ -10,6 +10,13 @@
 				"linux" "@_Z10JarExplodeiP9CTFPlayerP11CBaseEntityS2_RK6Vectorif7ETFCondfPKcS8_"
 				"windows" "\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xD8\x01\x00\x00\x56\x57\x8D\x8D\x64\xFF\xFF\xFF"
 			}
+			
+			"CTFPlayer::CanDisguise"
+			{
+				"library" "server"
+				"linux" "@_ZN9CTFPlayer11CanDisguiseEv"
+				"windows" "\x55\x8B\xEC\x51\x56\x8B\xF1\x8B\x06\x8B\x80\x2A\x2A\x2A\x2A\xFF\xD0\x84\xC0\x74\x2A\x83\xBE\x2A\x2A\x2A\x2A\x08"
+			}
 		}
 		
 		"Offsets"
@@ -57,6 +64,14 @@
 				"hooktype" "entity"
 				"this" "entity"
 				"return" "float"
+			}
+			
+			"CTFPlayer::CanDisguise"
+			{
+				"signature" "CTFPlayer::CanDisguise"
+				"callconv" "thiscall"
+				"this" "entity"
+				"return" "bool"
 			}
 		}
 	}

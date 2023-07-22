@@ -43,11 +43,13 @@ public Plugin myinfo = {
 #define DMG_MELEE DMG_BLAST_SURFACE
 #define DMG_DONT_COUNT_DAMAGE_TOWARDS_CRIT_RATE DMG_DISSOLVE
 #define TF_DMG_CUSTOM_NONE 0
+#define TF_DMG_CUSTOM_BACKSTAB 2
 #define TF_DMG_CUSTOM_BASEBALL 22
 #define TF_DMG_CUSTOM_PICKAXE 27
 #define TF_DMG_CUSTOM_STICKBOMB_EXPLOSION 42
 #define TF_DMG_CUSTOM_CANNONBALL_PUSH 61
 #define TF_DEATH_FEIGN_DEATH 0x20
+#define TF_FLAGTYPE_PLAYER_DESTRUCTION 6
 
 enum struct Item {
 	char key[64];
@@ -88,6 +90,7 @@ enum struct Player {
 	float icicle_regen_time;
 	int scout_airdash_value;
 	int scout_airdash_count;
+	int backstab_frame;
 }
 
 enum struct Entity {
@@ -115,6 +118,7 @@ Handle sdkcall_GetMaxHealth;
 Handle dhook_CTFWeaponBase_PrimaryAttack;
 Handle dhook_CTFWeaponBase_SecondaryAttack;
 Handle dhook_CTFBaseRocket_GetRadius;
+Handle dhook_CTFPlayer_CanDisguise;
 Item items[ITEMS_MAX];
 Player players[MAXPLAYERS+1];
 Entity entities[2048];
@@ -252,6 +256,7 @@ public void OnPluginStart() {
 	dhook_CTFWeaponBase_PrimaryAttack = DHookCreateFromConf(conf, "CTFWeaponBase::PrimaryAttack");
 	dhook_CTFWeaponBase_SecondaryAttack = DHookCreateFromConf(conf, "CTFWeaponBase::SecondaryAttack");
 	dhook_CTFBaseRocket_GetRadius = DHookCreateFromConf(conf, "CTFBaseRocket::GetRadius");
+	dhook_CTFPlayer_CanDisguise = DHookCreateFromConf(conf, "CTFPlayer::CanDisguise");
 	
 	delete conf;
 	
@@ -270,6 +275,10 @@ public void OnPluginStart() {
 	if (sdkcall_GetMaxHealth == null) SetFailState("Failed to create sdkcall_GetMaxHealth");
 	if (dhook_CTFWeaponBase_PrimaryAttack == null) SetFailState("Failed to create dhook_CTFWeaponBase_PrimaryAttack");
 	if (dhook_CTFWeaponBase_SecondaryAttack == null) SetFailState("Failed to create dhook_CTFWeaponBase_SecondaryAttack");
+	if (dhook_CTFBaseRocket_GetRadius == null) SetFailState("Failed to create dhook_CTFBaseRocket_GetRadius");
+	if (dhook_CTFPlayer_CanDisguise == null) SetFailState("Failed to create dhook_CTFPlayer_CanDisguise");
+	
+	DHookEnableDetour(dhook_CTFPlayer_CanDisguise, true, DHookCallback_CTFPlayer_CanDisguise);
 	
 	
 	for (idx = 1; idx <= MaxClients; idx++) {
@@ -2148,6 +2157,17 @@ Action SDKHookCB_OnTakeDamage(
 				}
 			}
 			
+			{
+				// backstab detection for eternal reward fix
+				
+				if (
+					StrEqual(class, "tf_weapon_knife") &&
+					damage_custom == TF_DMG_CUSTOM_BACKSTAB
+				) {
+					players[attacker].backstab_frame = GetGameTickCount();
+				}
+			}
+			
 			if (inflictor > MaxClients) {
 				GetEntityClassname(inflictor, class, sizeof(class));
 				
@@ -2962,6 +2982,58 @@ MRESReturn DHookCallback_CTFBaseRocket_GetRadius(int entity, Handle return_) {
 				return MRES_Override;
 			}
 		}
+	}
+	
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFPlayer_CanDisguise(int entity, Handle return_) {
+	if (
+		IsPlayerAlive(entity) &&
+		TF2_GetPlayerClass(entity) == TFClass_Spy &&
+		(GetGameTickCount() - players[entity].backstab_frame) > 13 &&
+		(GetGameTickCount() - players[entity].backstab_frame) < 20 &&
+		ItemIsEnabled("eternal", entity)
+	) {
+		// CanDisguise() is being called from the eternal reward's DisguiseOnKill()
+		// so we have to overwrite the result, otherwise the "cannot backstab" attrib will block it
+		
+		bool value = true;
+		
+		char class[64];
+		
+		int flag = GetEntPropEnt(entity, Prop_Send, "m_hItem");
+		
+		if (flag > 0) {
+			GetEntityClassname(flag, class, sizeof(class));
+			
+			if (
+				StrEqual(class, "item_teamflag") &&
+				GetEntProp(flag, Prop_Send, "m_nType") != TF_FLAGTYPE_PLAYER_DESTRUCTION
+			) {
+				value = false;
+			}
+		}
+		
+		if (GetEntProp(entity, Prop_Send, "m_bHasPasstimeBall")) {
+			value = false;
+		}
+		
+		int weapon = GetPlayerWeaponSlot(entity, TFWeaponSlot_Grenade); // wtf valve?
+		
+		if (weapon > 0) {
+			GetEntityClassname(weapon, class, sizeof(class));
+			
+			if (StrEqual(class, "tf_weapon_pda_spy") == false) {
+				value = false;
+			}
+		} else {
+			value = false;
+		}
+		
+		DHookSetReturn(return_, value);
+		
+		return MRES_Override;
 	}
 	
 	return MRES_Ignored;

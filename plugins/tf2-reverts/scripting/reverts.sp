@@ -3054,35 +3054,3 @@ float CalcViewsOffset(float angle1[3], float angle2[3]) {
 float FixViewAngleY(float angle) {
 	return (angle > 180.0 ? (angle - 360.0) : angle);
 }
-
-
-/*
-
-bool ItemIsThisDef(char[] key, char[] class, int index) {
-	if (
-		StrEqual(key, "ambassador") &&
-		StrEqual(class, "tf_weapon_revolver") &&
-		(index == 61 || index == 1006)
-	) { return true; }
-	
-	return false;
-}
-
-bool ItemIsThisEnt(char[] key, int entity) {
-	char class[64];
-	
-	if (entity > MaxClients) {
-		GetEntityClassname(entity, class, sizeof(class));
-		
-		if (
-			StrContains(class, "tf_weapon_") == 0 ||
-			StrContains(class, "tf_wearable_") == 0
-		) {
-			return ItemIsThisDef(key, class, GetEntProp(entity, Prop_Send, "m_iItemDefinitionIndex"));
-		}
-	}
-	
-	return false;
-}
-
-*/

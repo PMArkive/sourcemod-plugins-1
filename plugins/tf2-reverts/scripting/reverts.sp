@@ -2926,7 +2926,7 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 										if (TR_DidHit() == false) {
 											if (idx <= MaxClients) {
 												// damage players
-												SDKHooks_TakeDamage(idx, entity, owner, BALANCE_CIRCUIT_DAMAGE, DMG_SHOCK, entity, NULL_VECTOR, target_pos);
+												SDKHooks_TakeDamage(idx, entity, owner, BALANCE_CIRCUIT_DAMAGE, DMG_SHOCK, entity, NULL_VECTOR, target_pos, false);
 											} else {
 												// delete projectiles
 												RemoveEntity(idx);

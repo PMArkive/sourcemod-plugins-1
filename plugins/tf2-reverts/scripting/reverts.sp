@@ -90,7 +90,7 @@ enum struct Player {
 	float icicle_regen_time;
 	int scout_airdash_value;
 	int scout_airdash_count;
-	int backstab_frame;
+	float backstab_time;
 }
 
 enum struct Entity {
@@ -2164,7 +2164,7 @@ Action SDKHookCB_OnTakeDamage(
 					StrEqual(class, "tf_weapon_knife") &&
 					damage_custom == TF_DMG_CUSTOM_BACKSTAB
 				) {
-					players[attacker].backstab_frame = GetGameTickCount();
+					players[attacker].backstab_time = GetGameTime();
 				}
 			}
 			
@@ -2434,7 +2434,7 @@ float ValveRemapVal(float val, float a, float b, float c, float d) {
 	if (tmp < 0.0) tmp = 0.0;
 	if (tmp > 1.0) tmp = 1.0;
 	
-	return (c + (d - c) * tmp);
+	return (c + ((d - c) * tmp));
 }
 
 void ParticleShowSimple(char[] name, float position[3]) {
@@ -2991,12 +2991,12 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise(int entity, Handle return_) {
 	if (
 		IsPlayerAlive(entity) &&
 		TF2_GetPlayerClass(entity) == TFClass_Spy &&
-		(GetGameTickCount() - players[entity].backstab_frame) > 13 &&
-		(GetGameTickCount() - players[entity].backstab_frame) < 20 &&
+		(GetGameTime() - players[entity].backstab_time) > 0.0 &&
+		(GetGameTime() - players[entity].backstab_time) < 0.5 &&
 		ItemIsEnabled("eternal", entity)
 	) {
 		// CanDisguise() is being called from the eternal reward's DisguiseOnKill()
-		// so we have to overwrite the result, otherwise the "cannot backstab" attrib will block it
+		// so we have to overwrite the result, otherwise the "cannot disguise" attrib will block it
 		
 		bool value = true;
 		
